@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, Ban, LayoutGrid, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import type { Space, CreateSpaceData, UpdateSpaceData, SpaceType } from '../types/space'
 import { SPACE_TYPE_LABELS } from '../types/space'
 
@@ -16,11 +17,11 @@ const EMPTY_FORM = {
 
 export default function Spaces() {
   const { user } = useAuth()
+  const toast = useToast()
   const isAdmin = user?.role === 'admin'
 
   const [spaces, setSpaces] = useState<Space[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingSpace, setEditingSpace] = useState<Space | null>(null)
   const [formData, setFormData] = useState(EMPTY_FORM)
@@ -30,9 +31,8 @@ export default function Spaces() {
     try {
       const data = await api.get<Space[]>('/spaces')
       setSpaces(data)
-      setError('')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al cargar espacios')
+      toast.error(err instanceof ApiError ? err.message : 'Error al cargar espacios')
     } finally {
       setLoading(false)
     }
@@ -71,12 +71,11 @@ export default function Spaces() {
     e.preventDefault()
 
     if (formData.openingTime >= formData.closingTime) {
-      setError('La hora de cierre debe ser posterior a la hora de apertura')
+      toast.error('La hora de cierre debe ser posterior a la hora de apertura')
       return
     }
 
     setSubmitting(true)
-    setError('')
 
     try {
       if (editingSpace) {
@@ -85,13 +84,15 @@ export default function Spaces() {
           formData as UpdateSpaceData
         )
         setSpaces((prev) => prev.map((s) => (s._id === updated._id ? updated : s)))
+        toast.success('Espacio actualizado correctamente')
       } else {
         const created = await api.post<Space>('/spaces', formData as CreateSpaceData)
         setSpaces((prev) => [created, ...prev])
+        toast.success('Espacio creado correctamente')
       }
       closeForm()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al guardar espacio')
+      toast.error(err instanceof ApiError ? err.message : 'Error al guardar espacio')
     } finally {
       setSubmitting(false)
     }
@@ -103,8 +104,9 @@ export default function Spaces() {
     try {
       const updated = await api.patch<Space>(`/spaces/${space._id}/deactivate`)
       setSpaces((prev) => prev.map((s) => (s._id === updated._id ? updated : s)))
+      toast.success('Espacio desactivado correctamente')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al desactivar espacio')
+      toast.error(err instanceof ApiError ? err.message : 'Error al desactivar espacio')
     }
   }
 
@@ -137,12 +139,6 @@ export default function Spaces() {
           </button>
         )}
       </div>
-
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">

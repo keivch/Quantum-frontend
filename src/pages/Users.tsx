@@ -1,13 +1,14 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Ban, Users, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
+import { useToast } from '../context/ToastContext'
 import PasswordInput from '../components/PasswordInput'
 import type { User, UserRole } from '../types/auth'
 
 export default function UsersPage() {
+  const toast = useToast()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [formData, setFormData] = useState({
     name: '',
@@ -21,9 +22,8 @@ export default function UsersPage() {
     try {
       const data = await api.get<User[]>('/users')
       setUsers(data)
-      setError('')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al cargar usuarios')
+      toast.error(err instanceof ApiError ? err.message : 'Error al cargar usuarios')
     } finally {
       setLoading(false)
     }
@@ -42,8 +42,9 @@ export default function UsersPage() {
       setUsers((prev) => [created, ...prev])
       setShowForm(false)
       setFormData({ name: '', email: '', password: '', role: 'operator' })
+      toast.success('Usuario creado correctamente')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al crear usuario')
+      toast.error(err instanceof ApiError ? err.message : 'Error al crear usuario')
     } finally {
       setSubmitting(false)
     }
@@ -55,8 +56,9 @@ export default function UsersPage() {
     try {
       const updated = await api.patch<User>(`/users/${user.id}/deactivate`)
       setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+      toast.success('Usuario desactivado correctamente')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al desactivar usuario')
+      toast.error(err instanceof ApiError ? err.message : 'Error al desactivar usuario')
     }
   }
 
@@ -83,12 +85,6 @@ export default function UsersPage() {
           Nuevo usuario
         </button>
       </div>
-
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
