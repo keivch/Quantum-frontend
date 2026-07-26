@@ -2,7 +2,17 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { Plus, Pencil, Ban, LayoutGrid, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useAuth } from '../context/AuthContext'
-import type { Space, CreateSpaceData, UpdateSpaceData } from '../types/space'
+import type { Space, CreateSpaceData, UpdateSpaceData, SpaceType } from '../types/space'
+import { SPACE_TYPE_LABELS } from '../types/space'
+
+const EMPTY_FORM = {
+  name: '',
+  type: 'sala' as SpaceType,
+  location: '',
+  capacity: 1,
+  openingTime: '08:00',
+  closingTime: '18:00',
+}
 
 export default function Spaces() {
   const { user } = useAuth()
@@ -13,7 +23,7 @@ export default function Spaces() {
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [editingSpace, setEditingSpace] = useState<Space | null>(null)
-  const [formData, setFormData] = useState({ name: '', description: '' })
+  const [formData, setFormData] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
 
   const fetchSpaces = async () => {
@@ -34,29 +44,46 @@ export default function Spaces() {
 
   const openCreateForm = () => {
     setEditingSpace(null)
-    setFormData({ name: '', description: '' })
+    setFormData(EMPTY_FORM)
     setShowForm(true)
   }
 
   const openEditForm = (space: Space) => {
     setEditingSpace(space)
-    setFormData({ name: space.name, description: space.description })
+    setFormData({
+      name: space.name,
+      type: space.type,
+      location: space.location,
+      capacity: space.capacity,
+      openingTime: space.openingTime,
+      closingTime: space.closingTime,
+    })
     setShowForm(true)
   }
 
   const closeForm = () => {
     setShowForm(false)
     setEditingSpace(null)
-    setFormData({ name: '', description: '' })
+    setFormData(EMPTY_FORM)
   }
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
+
+    if (formData.openingTime >= formData.closingTime) {
+      setError('La hora de cierre debe ser posterior a la hora de apertura')
+      return
+    }
+
     setSubmitting(true)
+    setError('')
 
     try {
       if (editingSpace) {
-        const updated = await api.put<Space>(`/spaces/${editingSpace._id}`, formData as UpdateSpaceData)
+        const updated = await api.put<Space>(
+          `/spaces/${editingSpace._id}`,
+          formData as UpdateSpaceData
+        )
         setSpaces((prev) => prev.map((s) => (s._id === updated._id ? updated : s)))
       } else {
         const created = await api.post<Space>('/spaces', formData as CreateSpaceData)
@@ -71,10 +98,10 @@ export default function Spaces() {
   }
 
   const handleDeactivate = async (space: Space) => {
-    if (!confirm(`Desactivar el espacio "${space.name}"?`)) return
+    if (!confirm(`¿Desactivar el espacio "${space.name}"?`)) return
 
     try {
-      const updated = await api.patch<Space>(`/spaces/${space._id}`)
+      const updated = await api.patch<Space>(`/spaces/${space._id}/deactivate`)
       setSpaces((prev) => prev.map((s) => (s._id === updated._id ? updated : s)))
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'Error al desactivar espacio')
@@ -96,7 +123,7 @@ export default function Spaces() {
           <h1 className="text-2xl font-semibold text-gray-900">Espacios</h1>
           <p className="mt-1 text-sm text-gray-500">
             {isAdmin
-              ? 'Gestiona los espacios del sistema'
+              ? 'Gestiona los espacios del coworking'
               : 'Consulta los espacios disponibles'}
           </p>
         </div>
@@ -119,12 +146,15 @@ export default function Spaces() {
 
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
             <div className="mb-5 flex items-center justify-between">
               <h2 className="text-lg font-semibold text-gray-900">
                 {editingSpace ? 'Editar espacio' : 'Crear espacio'}
               </h2>
-              <button onClick={closeForm} className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600">
+              <button
+                onClick={closeForm}
+                className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -142,18 +172,99 @@ export default function Spaces() {
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
+
               <div>
-                <label htmlFor="description" className="mb-1.5 block text-sm font-medium text-gray-700">
-                  Descripción
+                <label htmlFor="type" className="mb-1.5 block text-sm font-medium text-gray-700">
+                  Tipo
                 </label>
-                <textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  rows={3}
+                <select
+                  id="type"
+                  value={formData.type}
+                  onChange={(e) =>
+                    setFormData({ ...formData, type: e.target.value as SpaceType })
+                  }
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                >
+                  {Object.entries(SPACE_TYPE_LABELS).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="location"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Sede / ubicación
+                </label>
+                <input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                  required
                   className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
                 />
               </div>
+
+              <div>
+                <label
+                  htmlFor="capacity"
+                  className="mb-1.5 block text-sm font-medium text-gray-700"
+                >
+                  Capacidad
+                </label>
+                <input
+                  id="capacity"
+                  type="number"
+                  min={1}
+                  value={formData.capacity}
+                  onChange={(e) =>
+                    setFormData({ ...formData, capacity: parseInt(e.target.value, 10) || 1 })
+                  }
+                  required
+                  className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="openingTime"
+                    className="mb-1.5 block text-sm font-medium text-gray-700"
+                  >
+                    Hora de apertura
+                  </label>
+                  <input
+                    id="openingTime"
+                    type="time"
+                    value={formData.openingTime}
+                    onChange={(e) => setFormData({ ...formData, openingTime: e.target.value })}
+                    required
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+                <div>
+                  <label
+                    htmlFor="closingTime"
+                    className="mb-1.5 block text-sm font-medium text-gray-700"
+                  >
+                    Hora de cierre
+                  </label>
+                  <input
+                    id="closingTime"
+                    type="time"
+                    value={formData.closingTime}
+                    onChange={(e) => setFormData({ ...formData, closingTime: e.target.value })}
+                    required
+                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  />
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -175,61 +286,76 @@ export default function Spaces() {
         </div>
       )}
 
-      {spaces.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-300 bg-white py-16 text-center">
-          <LayoutGrid className="mx-auto h-10 w-10 text-gray-300" />
-          <p className="mt-3 text-sm text-gray-500">No hay espacios registrados</p>
-        </div>
-      ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {spaces.map((space) => (
-            <div
-              key={space._id}
-              className={`rounded-xl border bg-white p-5 shadow-sm transition ${
-                space.active ? 'border-gray-200' : 'border-gray-200 opacity-60'
-              }`}
-            >
-              <div className="mb-3 flex items-start justify-between">
-                <h3 className="font-medium text-gray-900">{space.name}</h3>
-                <span
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                    space.active
-                      ? 'bg-green-50 text-green-700'
-                      : 'bg-gray-100 text-gray-500'
-                  }`}
-                >
-                  {space.active ? 'Activo' : 'Inactivo'}
-                </span>
-              </div>
-              {space.description && (
-                <p className="mb-4 text-sm text-gray-500 line-clamp-2">{space.description}</p>
-              )}
-              <p className="text-xs text-gray-400">
-                Creado {new Date(space.createdAt).toLocaleDateString('es')}
-              </p>
+      <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
+        <table className="w-full text-left text-sm">
+          <thead className="border-b border-gray-200 bg-gray-50">
+            <tr>
+              <th className="px-5 py-3 font-medium text-gray-600">Nombre</th>
+              <th className="px-5 py-3 font-medium text-gray-600">Tipo</th>
+              <th className="px-5 py-3 font-medium text-gray-600">Ubicación</th>
+              <th className="px-5 py-3 font-medium text-gray-600">Capacidad</th>
+              <th className="px-5 py-3 font-medium text-gray-600">Horario</th>
+              <th className="px-5 py-3 font-medium text-gray-600">Estado</th>
+              {isAdmin && <th className="px-5 py-3 font-medium text-gray-600">Acciones</th>}
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-100">
+            {spaces.map((space) => (
+              <tr key={space._id} className={!space.active ? 'opacity-60' : ''}>
+                <td className="px-5 py-3.5 font-medium text-gray-900">{space.name}</td>
+                <td className="px-5 py-3.5 text-gray-500">
+                  {SPACE_TYPE_LABELS[space.type] ?? space.type}
+                </td>
+                <td className="px-5 py-3.5 text-gray-500">{space.location}</td>
+                <td className="px-5 py-3.5 text-gray-500">{space.capacity}</td>
+                <td className="px-5 py-3.5 text-gray-500">
+                  {space.openingTime} – {space.closingTime}
+                </td>
+                <td className="px-5 py-3.5">
+                  <span
+                    className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                      space.active
+                        ? 'bg-green-50 text-green-700'
+                        : 'bg-gray-100 text-gray-500'
+                    }`}
+                  >
+                    {space.active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </td>
+                {isAdmin && (
+                  <td className="px-5 py-3.5">
+                    {space.active && (
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => openEditForm(space)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Editar
+                        </button>
+                        <button
+                          onClick={() => handleDeactivate(space)}
+                          className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+                        >
+                          <Ban className="h-3.5 w-3.5" />
+                          Desactivar
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
 
-              {isAdmin && space.active && (
-                <div className="mt-4 flex gap-2 border-t border-gray-100 pt-4">
-                  <button
-                    onClick={() => openEditForm(space)}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-indigo-600 hover:bg-indigo-50"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    Editar
-                  </button>
-                  <button
-                    onClick={() => handleDeactivate(space)}
-                    className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium text-red-600 hover:bg-red-50"
-                  >
-                    <Ban className="h-3.5 w-3.5" />
-                    Desactivar
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+        {spaces.length === 0 && (
+          <div className="py-12 text-center">
+            <LayoutGrid className="mx-auto h-10 w-10 text-gray-300" />
+            <p className="mt-3 text-sm text-gray-500">No hay espacios registrados</p>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

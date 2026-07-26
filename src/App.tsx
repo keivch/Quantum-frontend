@@ -5,6 +5,7 @@ import Home from './pages/Home'
 import About from './pages/About'
 import Login from './pages/Login'
 import Spaces from './pages/Spaces'
+import Reservations from './pages/Reservations'
 import UsersPage from './pages/Users'
 import NotFound from './pages/NotFound'
 
@@ -20,6 +21,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Spaces />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="reservations"
+          element={
+            <ProtectedRoute>
+              <Reservations />
             </ProtectedRoute>
           }
         />

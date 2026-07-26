@@ -23,6 +23,20 @@ export class ApiError extends Error {
   }
 }
 
+function buildUrl(endpoint: string, params?: Record<string, string | number | undefined>) {
+  if (!params) return endpoint
+
+  const searchParams = new URLSearchParams()
+  for (const [key, value] of Object.entries(params)) {
+    if (value !== undefined && value !== '') {
+      searchParams.set(key, String(value))
+    }
+  }
+
+  const query = searchParams.toString()
+  return query ? `${endpoint}?${query}` : endpoint
+}
+
 async function request<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -52,11 +66,15 @@ async function request<T>(
 }
 
 export const api = {
-  get: <T>(endpoint: string) => request<T>(endpoint),
+  get: <T>(endpoint: string, params?: Record<string, string | number | undefined>) =>
+    request<T>(buildUrl(endpoint, params)),
   post: <T>(endpoint: string, body: unknown) =>
     request<T>(endpoint, { method: 'POST', body: JSON.stringify(body) }),
   put: <T>(endpoint: string, body: unknown) =>
     request<T>(endpoint, { method: 'PUT', body: JSON.stringify(body) }),
-  patch: <T>(endpoint: string) =>
-    request<T>(endpoint, { method: 'PATCH' }),
+  patch: <T>(endpoint: string, body?: unknown) =>
+    request<T>(endpoint, {
+      method: 'PATCH',
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    }),
 }
