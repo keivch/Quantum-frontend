@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Plus, Ban, Users, X } from 'lucide-react'
+import { Plus, Ban, CheckCircle, Users, X } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useToast } from '../context/ToastContext'
 import PasswordInput from '../components/PasswordInput'
@@ -59,6 +59,18 @@ export default function UsersPage() {
       toast.success('Usuario desactivado correctamente')
     } catch (err) {
       toast.error(err instanceof ApiError ? err.message : 'Error al desactivar usuario')
+    }
+  }
+
+  const handleActivate = async (user: User) => {
+    if (!confirm(`Reactivar al usuario "${user.name}"?`)) return
+
+    try {
+      const updated = await api.patch<User>(`/users/${user.id}/activate`)
+      setUsers((prev) => prev.map((u) => (u.id === updated.id ? updated : u)))
+      toast.success('Usuario reactivado correctamente')
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Error al reactivar usuario')
     }
   }
 
@@ -199,13 +211,21 @@ export default function UsersPage() {
                   </span>
                 </td>
                 <td className="px-5 py-3.5">
-                  {user.active && (
+                  {user.active ? (
                     <button
                       onClick={() => handleDeactivate(user)}
                       className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
                     >
                       <Ban className="h-3.5 w-3.5" />
                       Desactivar
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleActivate(user)}
+                      className="inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-medium text-green-600 hover:bg-green-50"
+                    >
+                      <CheckCircle className="h-3.5 w-3.5" />
+                      Reactivar
                     </button>
                   )}
                 </td>
