@@ -9,6 +9,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Search,
+  Download,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
 import { useToast } from '../context/ToastContext'
@@ -97,6 +98,7 @@ export default function Reservations() {
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [submitting, setSubmitting] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const fetchSpaces = async () => {
     try {
@@ -240,6 +242,36 @@ export default function Reservations() {
     setFilters((prev) => ({ ...prev, page: 1 }))
   }
 
+  const handleExport = async () => {
+    setExporting(true)
+    try {
+      const { total } = await api.download('/reservations/export', {
+        search: filters.search,
+        status: filters.status || undefined,
+        space: filters.space || undefined,
+        startDateFrom: filters.startDateFrom || undefined,
+        startDateTo: filters.startDateTo || undefined,
+        sortBy: filters.sortBy,
+        sortOrder: filters.sortOrder,
+      })
+
+      if (total !== null && total !== pagination.total) {
+        toast.error('La cantidad exportada no coincide con el listado. Actualiza la vista.')
+        return
+      }
+
+      toast.success(
+        total !== null
+          ? `Se exportaron ${total} reserva${total !== 1 ? 's' : ''} correctamente`
+          : 'Reservas exportadas correctamente'
+      )
+    } catch (err) {
+      toast.error(err instanceof ApiError ? err.message : 'Error al exportar reservas')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const changePage = (page: number) => {
     setFilters((prev) => ({ ...prev, page }))
   }
@@ -253,13 +285,23 @@ export default function Reservations() {
             Gestiona las reservas del coworking
           </p>
         </div>
-        <button
-          onClick={openCreateForm}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
-        >
-          <Plus className="h-4 w-4" />
-          Nueva reserva
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExport}
+            disabled={exporting || loading}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:opacity-60"
+          >
+            <Download className="h-4 w-4" />
+            {exporting ? 'Exportando...' : 'Exportar CSV'}
+          </button>
+          <button
+            onClick={openCreateForm}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white transition hover:bg-indigo-700"
+          >
+            <Plus className="h-4 w-4" />
+            Nueva reserva
+          </button>
+        </div>
       </div>
 
       {/* Filtros */}
