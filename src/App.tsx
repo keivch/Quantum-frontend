@@ -7,6 +7,7 @@ import Login from './pages/Login'
 import Spaces from './pages/Spaces'
 import Reservations from './pages/Reservations'
 import UsersPage from './pages/Users'
+import Dashboard from './pages/Dashboard'
 import NotFound from './pages/NotFound'
 
 function App() {
@@ -29,6 +30,14 @@ function App() {
           element={
             <ProtectedRoute>
               <Reservations />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
             </ProtectedRoute>
           }
         />

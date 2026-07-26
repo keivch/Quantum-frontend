@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, LayoutGrid, Users, CalendarDays } from 'lucide-react'
+import { LogOut, LayoutGrid, Users, CalendarDays, BarChart3 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export default function Layout() {
@@ -34,6 +34,13 @@ export default function Layout() {
                 >
                   <CalendarDays className="h-4 w-4" />
                   Reservas
+                </Link>
+                <Link
+                  to="/dashboard"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-indigo-600"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Dashboard
                 </Link>
                 {user?.role === 'admin' && (
                   <Link
