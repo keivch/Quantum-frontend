@@ -65,6 +65,43 @@ async function request<T>(
   return data as T
 }
 
+export async function downloadFile(
+  endpoint: string,
+  params?: Record<string, string | number | undefined>
+): Promise<{ total: number | null }> {
+  const token = getToken()
+  const headers: Record<string, string> = {}
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  const response = await fetch(`${API_URL}${buildUrl(endpoint, params)}`, { headers })
+
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}))
+    throw new ApiError(data.error || 'Error en la solicitud', response.status)
+  }
+
+  const blob = await response.blob()
+  const disposition = response.headers.get('Content-Disposition')
+  const filenameMatch = disposition?.match(/filename="([^"]+)"/)
+  const filename = filenameMatch?.[1] || 'reservas.csv'
+  const totalHeader = response.headers.get('X-Total-Count')
+  const total = totalHeader ? Number(totalHeader) : null
+
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  link.remove()
+  URL.revokeObjectURL(url)
+
+  return { total }
+}
+
 export const api = {
   get: <T>(endpoint: string, params?: Record<string, string | number | undefined>) =>
     request<T>(buildUrl(endpoint, params)),
@@ -77,4 +114,5 @@ export const api = {
       method: 'PATCH',
       ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
     }),
+  download: downloadFile,
 }
