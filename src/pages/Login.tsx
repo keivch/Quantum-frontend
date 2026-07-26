@@ -2,17 +2,18 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { LogIn, Mail } from 'lucide-react'
 import { useAuth, ApiError } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import PasswordInput from '../components/PasswordInput'
 
 export default function Login() {
   const { login, isAuthenticated, isLoading } = useAuth()
+  const toast = useToast()
   const navigate = useNavigate()
   const location = useLocation()
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || '/'
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
   if (isLoading) {
@@ -29,7 +30,6 @@ export default function Login() {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    setError('')
     setSubmitting(true)
 
     try {
@@ -37,9 +37,9 @@ export default function Login() {
       navigate(from, { replace: true })
     } catch (err) {
       if (err instanceof ApiError) {
-        setError(err.message)
+        toast.error(err.message)
       } else {
-        setError('No se pudo iniciar sesión. Intenta de nuevo.')
+        toast.error('No se pudo iniciar sesión. Intenta de nuevo.')
       }
     } finally {
       setSubmitting(false)
@@ -63,12 +63,6 @@ export default function Login() {
           onSubmit={handleSubmit}
           className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm"
         >
-          {error && (
-            <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-              {error}
-            </div>
-          )}
-
           <div className="space-y-5">
             <div>
               <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">

@@ -11,6 +11,7 @@ import {
   Search,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
+import { useToast } from '../context/ToastContext'
 import type { Space } from '../types/space'
 import type {
   Reservation,
@@ -70,6 +71,7 @@ function isTerminalStatus(status: ReservationStatus) {
 }
 
 export default function Reservations() {
+  const toast = useToast()
   const [reservations, setReservations] = useState<Reservation[]>([])
   const [spaces, setSpaces] = useState<Space[]>([])
   const [pagination, setPagination] = useState({
@@ -90,7 +92,6 @@ export default function Reservations() {
     sortOrder: 'desc',
   })
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [showDetail, setShowDetail] = useState<Reservation | null>(null)
   const [editingReservation, setEditingReservation] = useState<Reservation | null>(null)
@@ -122,9 +123,8 @@ export default function Reservations() {
       })
       setReservations(result.data)
       setPagination(result.pagination)
-      setError('')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al cargar reservas')
+      toast.error(err instanceof ApiError ? err.message : 'Error al cargar reservas')
     } finally {
       setLoading(false)
     }
@@ -173,12 +173,11 @@ export default function Reservations() {
     e.preventDefault()
 
     if (new Date(formData.endDate) <= new Date(formData.startDate)) {
-      setError('La fecha de fin debe ser posterior a la fecha de inicio')
+      toast.error('La fecha de fin debe ser posterior a la fecha de inicio')
       return
     }
 
     setSubmitting(true)
-    setError('')
 
     const payload = {
       ...formData,
@@ -197,13 +196,15 @@ export default function Reservations() {
           prev.map((r) => (r._id === updated._id ? updated : r))
         )
         if (showDetail?._id === updated._id) setShowDetail(updated)
+        toast.success('Reserva actualizada correctamente')
       } else {
         await api.post<Reservation>('/reservations', payload as CreateReservationData)
         await fetchReservations()
+        toast.success('Reserva creada correctamente')
       }
       closeForm()
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al guardar reserva')
+      toast.error(err instanceof ApiError ? err.message : 'Error al guardar reserva')
     } finally {
       setSubmitting(false)
     }
@@ -220,8 +221,9 @@ export default function Reservations() {
         prev.map((r) => (r._id === updated._id ? updated : r))
       )
       if (showDetail?._id === updated._id) setShowDetail(updated)
+      toast.success('Reserva cancelada correctamente')
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al cancelar reserva')
+      toast.error(err instanceof ApiError ? err.message : 'Error al cancelar reserva')
     }
   }
 
@@ -230,7 +232,7 @@ export default function Reservations() {
       const detail = await api.get<Reservation>(`/reservations/${reservation._id}`)
       setShowDetail(detail)
     } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'Error al cargar detalle')
+      toast.error(err instanceof ApiError ? err.message : 'Error al cargar detalle')
     }
   }
 
@@ -259,12 +261,6 @@ export default function Reservations() {
           Nueva reserva
         </button>
       </div>
-
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
 
       {/* Filtros */}
       <div className="mb-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm">

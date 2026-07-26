@@ -21,6 +21,7 @@ import {
   Inbox,
 } from 'lucide-react'
 import { api, ApiError } from '../lib/api'
+import { useToast } from '../context/ToastContext'
 import type { ReservationAnalytics } from '../types/analytics'
 import { RESERVATION_STATUS_LABELS } from '../types/reservation'
 import type { ReservationStatus } from '../types/reservation'
@@ -62,13 +63,13 @@ function formatPercent(value: number) {
 }
 
 export default function Dashboard() {
+  const toast = useToast()
   const defaultRange = getDefaultDateRange()
   const [draftFrom, setDraftFrom] = useState(defaultRange.startDateFrom)
   const [draftTo, setDraftTo] = useState(defaultRange.startDateTo)
   const [filters, setFilters] = useState(defaultRange)
   const [analytics, setAnalytics] = useState<ReservationAnalytics | null>(null)
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
 
   const fetchAnalytics = useCallback(async () => {
     setLoading(true)
@@ -78,10 +79,9 @@ export default function Dashboard() {
         startDateTo: filters.startDateTo,
       })
       setAnalytics(data)
-      setError('')
     } catch (err) {
       setAnalytics(null)
-      setError(err instanceof ApiError ? err.message : 'Error al cargar analíticas')
+      toast.error(err instanceof ApiError ? err.message : 'Error al cargar analíticas')
     } finally {
       setLoading(false)
     }
@@ -93,10 +93,9 @@ export default function Dashboard() {
 
   const applyFilters = () => {
     if (new Date(draftTo) < new Date(draftFrom)) {
-      setError('La fecha de fin debe ser posterior o igual a la fecha de inicio')
+      toast.error('La fecha de fin debe ser posterior o igual a la fecha de inicio')
       return
     }
-    setError('')
     setFilters({ startDateFrom: draftFrom, startDateTo: draftTo })
   }
 
@@ -161,12 +160,6 @@ export default function Dashboard() {
           </button>
         </div>
       </div>
-
-      {error && (
-        <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </div>
-      )}
 
       {loading ? (
         <div className="flex justify-center py-24">
