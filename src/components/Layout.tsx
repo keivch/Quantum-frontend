@@ -1,5 +1,5 @@
 import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { LogOut, LayoutGrid, Users } from 'lucide-react'
+import { LogOut, LayoutGrid, Users, CalendarDays } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 
 export default function Layout() {
@@ -27,6 +27,13 @@ export default function Layout() {
                 >
                   <LayoutGrid className="h-4 w-4" />
                   Espacios
+                </Link>
+                <Link
+                  to="/reservations"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-gray-600 hover:text-indigo-600"
+                >
+                  <CalendarDays className="h-4 w-4" />
+                  Reservas
                 </Link>
                 {user?.role === 'admin' && (
                   <Link
