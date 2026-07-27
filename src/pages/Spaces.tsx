@@ -99,7 +99,8 @@ export default function Spaces() {
   }
 
   const handleDeactivate = async (space: Space) => {
-    if (!confirm(`¿Desactivar el espacio "${space.name}"?`)) return
+    const confirmed = await toast.confirm(`¿Desactivar el espacio "${space.name}"?`)
+    if (!confirmed) return
 
     try {
       const updated = await api.patch<Space>(`/spaces/${space._id}/deactivate`)
