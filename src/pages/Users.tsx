@@ -51,7 +51,8 @@ export default function UsersPage() {
   }
 
   const handleDeactivate = async (user: User) => {
-    if (!confirm(`Desactivar al usuario "${user.name}"?`)) return
+    const confirmed = await toast.confirm(`¿Desactivar al usuario "${user.name}"?`)
+    if (!confirmed) return
 
     try {
       const updated = await api.patch<User>(`/users/${user.id}/deactivate`)
@@ -63,7 +64,10 @@ export default function UsersPage() {
   }
 
   const handleActivate = async (user: User) => {
-    if (!confirm(`Reactivar al usuario "${user.name}"?`)) return
+    const confirmed = await toast.confirm(`¿Reactivar al usuario "${user.name}"?`, {
+      variant: 'default',
+    })
+    if (!confirmed) return
 
     try {
       const updated = await api.patch<User>(`/users/${user.id}/activate`)

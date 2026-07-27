@@ -213,7 +213,8 @@ export default function Reservations() {
   }
 
   const handleCancel = async (reservation: Reservation) => {
-    if (!confirm(`¿Cancelar la reserva "${reservation.title}"?`)) return
+    const confirmed = await toast.confirm(`¿Cancelar la reserva "${reservation.title}"?`)
+    if (!confirmed) return
 
     try {
       const updated = await api.patch<Reservation>(
